@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comprendre la pression d'un pneu EUC v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root,[data-theme="light"]{--bg:#f7f6f2;--surface:#fcfbf8;--surface2:#efede7;--border:#d5d1c9;--text:#201c16;--muted:#6c675e;--primary:#0b6d73;--warn:#a14549;--ok:#47783d;--shadow:0 10px 30px rgba(0,0,0,.08)}
+    [data-theme="dark"]{--bg:#121315;--surface:#181a1d;--surface2:#22262b;--border:#343941;--text:#edf0f4;--muted:#a5aebb;--primary:#69c8cf;--warn:#ef8a90;--ok:#8bd17b;--shadow:0 14px 40px rgba(0,0,0,.35)}
+    *{box-sizing:border-box} html,body{margin:0;padding:0} body{font-family:'IBM Plex Sans',sans-serif;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 72%,var(--surface) 28%));color:var(--text);line-height:1.5}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px;display:grid;gap:20px}.top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:start}
+    h1{margin:0;font-size:clamp(1.9rem,2vw,2.7rem)} .sub{color:var(--muted);max-width:82ch}.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:10px 14px;cursor:pointer}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px}.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+    .card h2{margin:0 0 12px 0;font-size:1.12rem}.controls,.results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.full{grid-column:1/-1}
+    label{display:grid;gap:6px;font-weight:600;font-size:.95rem}.hint{color:var(--muted);font-size:.84rem;font-weight:400} input,select{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px;font:inherit}
+    input[type=range]{padding:0}.range{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.pill{font-family:'IBM Plex Mono',monospace;background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:6px 10px;min-width:96px;text-align:center}
+    .metric{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:14px}.k{color:var(--muted);font-size:.85rem}.v{font-size:clamp(1.15rem,2vw,1.8rem);font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+    .small,.notes{color:var(--muted)} .eq code{display:block;padding:10px 12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);margin-top:8px;font-family:'IBM Plex Mono',monospace;white-space:pre-wrap}
+    .barzone{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:14px}.axle{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;height:170px;margin-top:12px}
+    .wheelcol{display:grid;grid-template-rows:1fr auto auto;gap:8px;align-items:end;justify-items:center}.loadwrap{width:100%;height:120px;border-radius:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 16%,transparent),color-mix(in srgb,var(--primary) 4%,transparent));border:1px solid var(--border);display:flex;align-items:end;overflow:hidden}
+    .loadbar{width:100%;background:linear-gradient(180deg,var(--primary),color-mix(in srgb,var(--primary) 70%,black));min-height:2px;transition:height .2s ease}.wheel{width:78px;height:78px;border-radius:50%;border:8px solid var(--text);background:radial-gradient(circle at center,var(--surface) 0 22%,var(--surface2) 22% 55%,#555 56% 100%)}
+    .warn,.ok{padding:12px 14px;border-radius:14px}.warn{border:1px solid color-mix(in srgb,var(--warn) 35%,var(--border));background:color-mix(in srgb,var(--warn) 14%,var(--surface))}.ok{border:1px solid color-mix(in srgb,var(--ok) 35%,var(--border));background:color-mix(in srgb,var(--ok) 12%,var(--surface))}
+    @media (max-width:900px){.grid,.controls,.results{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Pourquoi un pneu d’EUC demande plus de pression v2</h1>
+        <div class="sub">Version corrigée : le pneu ne porte pas la charge uniquement grâce à l’air. Une partie est portée par la structure de la carcasse. Le calcul sépare donc une part “structure” et une part “pression”, ce qui donne des valeurs plus réalistes.</div>
+      </div>
+      <button class="btn" data-theme-toggle>Basculer clair/sombre</button>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Entrées</h2>
+        <div class="controls">
+          <label>Masse du rider (kg)<input id="massRider" type="number" min="0" step="0.1" value="90"></label>
+          <label>Masse du véhicule (kg)<input id="massVehicle" type="number" min="0" step="0.1" value="40"></label>
+
+          <label>Nombre de roues<select id="wheelCount"><option value="1">1 roue (EUC)</option><option value="2">2 roues</option></select></label>
+          <label>Type de pneu<select id="tireType"><option value="street-euc" selected>EUC route</option><option value="hybrid">EUC hybride / trail</option><option value="moto-road">Moto route</option><option value="bike-wide">Vélo large / souple</option><option value="custom">Personnalisé</option></select></label>
+
+          <label>Pression de référence (bar)<input id="refPressure" type="number" min="0.2" step="0.01" value="2.4"><span class="hint">Pression connue crédible pour une charge de référence donnée.</span></label>
+          <label>Charge de référence par roue (kg)<input id="refLoadKg" type="number" min="1" step="0.1" value="130"><span class="hint">Par défaut, la v2 est calée pour que 90 + 40 kg sur une EUC sorte autour de 2,4 bar.</span></label>
+
+          <label>Part structurelle du pneu<select id="structPreset"><option value="0.35">Faible</option><option value="0.50" selected>Moyenne</option><option value="0.65">Forte</option><option value="custom">Personnalisée</option></select><span class="hint">Plus cette part est grande, plus la carcasse porte la charge sans exiger trop d’air.</span></label>
+          <label>Part structurelle personnalisée<input id="structShare" type="number" min="0" max="0.9" step="0.01" value="0.50"><span class="hint">0 = tout par la pression, 0.5 = la moitié de la charge est absorbée par la structure.</span></label>
+
+          <label>Réactivité pression → charge<select id="loadExponentPreset"><option value="0.35">Douce</option><option value="0.45" selected>Normale</option><option value="0.60">Forte</option><option value="custom">Personnalisée</option></select><span class="hint">Valeur plus basse que la v1 pour éviter des hausses irréalistes.</span></label>
+          <label>Exposant personnalisé<input id="loadExponent" type="number" min="0.15" max="1.2" step="0.01" value="0.45"><span class="hint">Ignoré si tu ne choisis pas “Personnalisée”.</span></label>
+
+          <label>Coefficient de sécurité<select id="safetyPreset"><option value="1.00">Aucune marge</option><option value="1.05" selected>Légère marge</option><option value="1.10">Marge moyenne</option><option value="custom">Personnalisé</option></select><span class="hint">Ajoute une petite réserve de prudence.</span></label>
+          <label>Marge personnalisée<input id="safetyFactor" type="number" min="1" step="0.01" value="1.05"><span class="hint">Ignorée si tu ne choisis pas “Personnalisé”.</span></label>
+
+          <label class="full">Position du centre de gravité entre l’avant et l’arrière
+            <div class="range"><input id="cog" type="range" min="0" max="100" step="1" value="50"><div class="pill"><span id="cogVal">50</span>% avant</div></div>
+            <span class="hint">0% = tout sur l’arrière. 100% = tout sur l’avant. Sans effet si 1 roue.</span>
+          </label>
+
+          <label class="full">Pression actuelle du pneu (bar)<input id="currentPressure" type="number" min="0" step="0.01" value="2.40"><span class="hint">Permet de comparer la pression actuelle avec le minimum estimé.</span></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Répartition de charge</h2>
+        <div class="barzone">
+          <div class="small">Hypothèse : situation statique sur sol horizontal. L’objectif est pédagogique : comparer la charge par roue, pas modéliser chaque détail du pneu.</div>
+          <div class="axle">
+            <div class="wheelcol"><div class="loadwrap"><div id="barFront" class="loadbar" style="height:50%"></div></div><div class="wheel"></div><div class="pill" id="frontText">Avant : 0 N</div></div>
+            <div class="wheelcol"><div class="loadwrap"><div id="barRear" class="loadbar" style="height:50%"></div></div><div class="wheel"></div><div class="pill" id="rearText">Arrière : 0 N</div></div>
+          </div>
+        </div>
+        <div class="eq" style="margin-top:16px">
+          <h2>Calcul expliqué</h2>
+          <code id="eq1"></code>
+          <code id="eq2"></code>
+          <code id="eq3"></code>
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Résultats</h2>
+      <div class="results">
+        <div class="metric"><div class="k">Masse totale</div><div id="mTotal" class="v">0 kg</div></div>
+        <div class="metric"><div class="k">Charge max sur une roue</div><div id="loadMaxKg" class="v">0 kg</div></div>
+        <div class="metric"><div class="k">Charge portée par la pression</div><div id="pressureLoadKg" class="v">0 kg</div></div>
+        <div class="metric"><div class="k">Pression minimale estimée</div><div id="pMinBar" class="v">0 bar</div></div>
+        <div class="metric"><div class="k">Pression actuelle</div><div id="currentBarOut" class="v">0 bar</div></div>
+        <div class="metric"><div class="k">Écart actuel</div><div id="margin" class="v">0 %</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Lecture simple</h2>
+      <div id="statusBox" class="warn"></div>
+      <div class="notes" style="margin-top:14px">
+        <p><strong>Idée physique retenue :</strong> la littérature rappelle que la carcasse a sa propre rigidité, que la charge verticale ne passe pas uniquement par l’air, et que la relation entre charge, déformation et pression est non linéaire. [web:83][web:85][web:95]</p>
+        <p><strong>Pourquoi la v1 montait trop haut :</strong> elle traitait implicitement le pneu comme si presque toute la charge devait être équilibrée par l’air, ce qui surestime vite la pression sur un pneu à carcasse déjà rigide. [web:70][web:87]</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const presets = {
+      'street-euc': { refPressure: 2.4, refLoadKg: 130, structShare: 0.50, exponent: 0.45 },
+      'hybrid': { refPressure: 2.2, refLoadKg: 120, structShare: 0.55, exponent: 0.42 },
+      'moto-road': { refPressure: 2.5, refLoadKg: 170, structShare: 0.60, exponent: 0.38 },
+      'bike-wide': { refPressure: 1.6, refLoadKg: 70, structShare: 0.45, exponent: 0.40 },
+      'custom': null
+    };
+    const ids = ['massRider','massVehicle','wheelCount','tireType','refPressure','refLoadKg','structPreset','structShare','loadExponentPreset','loadExponent','safetyPreset','safetyFactor','cog','currentPressure'];
+    ids.forEach(id => $(id).addEventListener('input', update));
+
+    $('tireType').addEventListener('change', () => {
+      const p = presets[$('tireType').value];
+      if (p) {
+        $('refPressure').value = p.refPressure;
+        $('refLoadKg').value = p.refLoadKg;
+        $('structPreset').value = p.structShare.toFixed(2);
+        $('structShare').value = p.structShare.toFixed(2);
+        $('loadExponentPreset').value = p.exponent.toFixed(2);
+        $('loadExponent').value = p.exponent.toFixed(2);
+      }
+      update();
+    });
+    $('structPreset').addEventListener('change', () => {
+      if ($('structPreset').value !== 'custom') $('structShare').value = $('structPreset').value;
+      update();
+    });
+    $('loadExponentPreset').addEventListener('change', () => {
+      if ($('loadExponentPreset').value !== 'custom') $('loadExponent').value = $('loadExponentPreset').value;
+      update();
+    });
+    $('safetyPreset').addEventListener('change', () => {
+      if ($('safetyPreset').value !== 'custom') $('safetyFactor').value = $('safetyPreset').value;
+      update();
+    });
+    document.querySelector('[data-theme-toggle]').addEventListener('click', () => {
+      const html = document.documentElement;
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+    function fmt(x,d=1){return new Intl.NumberFormat('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:d}).format(x)}
+    function update(){
+      const g = 9.81;
+      const mR = Math.max(0, parseFloat($('massRider').value) || 0);
+      const mV = Math.max(0, parseFloat($('massVehicle').value) || 0);
+      const n = parseInt($('wheelCount').value, 10);
+      const refPressure = Math.max(0.2, parseFloat($('refPressure').value) || 0.2);
+      const refLoadKg = Math.max(1, parseFloat($('refLoadKg').value) || 1);
+      const structShare = Math.min(0.9, Math.max(0, parseFloat($('structShare').value) || 0));
+      const exponent = Math.min(1.2, Math.max(0.15, parseFloat($('loadExponent').value) || 0.45));
+      const safety = Math.max(1, parseFloat($('safetyFactor').value) || 1);
+      const cogFrontPct = Math.max(0, Math.min(100, parseFloat($('cog').value) || 50));
+      const currentBar = Math.max(0, parseFloat($('currentPressure').value) || 0);
+      $('cogVal').textContent = fmt(cogFrontPct,0);
+
+      const mTot = mR + mV;
+      const Ftot = mTot * g;
+      let front = 0, rear = 0;
+      if (n === 1) { front = Ftot; rear = 0; }
+      else { front = Ftot * (cogFrontPct / 100); rear = Ftot - front; }
+      const Fmax = Math.max(front, rear);
+      const loadMaxKg = Fmax / g;
+
+      const pressureLoadKg = Math.max(0, loadMaxKg * (1 - structShare));
+      const refPressureLoadKg = Math.max(1e-6, refLoadKg * (1 - structShare));
+      const pMinBar = refPressure * Math.pow(pressureLoadKg / refPressureLoadKg, exponent) * safety;
+      const deltaPct = pMinBar > 0 ? ((currentBar - pMinBar) / pMinBar) * 100 : 0;
+      const ratio = pMinBar > 0 ? currentBar / pMinBar : 0;
+
+      $('mTotal').textContent = fmt(mTot,1) + ' kg';
+      $('loadMaxKg').textContent = fmt(loadMaxKg,1) + ' kg';
+      $('pressureLoadKg').textContent = fmt(pressureLoadKg,1) + ' kg';
+      $('pMinBar').textContent = fmt(pMinBar,2) + ' bar';
+      $('currentBarOut').textContent = fmt(currentBar,2) + ' bar';
+      $('margin').textContent = fmt(deltaPct,0) + ' %';
+
+      $('frontText').textContent = n === 1 ? 'Roue unique : ' + fmt(front,0) + ' N' : 'Avant : ' + fmt(front,0) + ' N';
+      $('rearText').textContent = n === 1 ? 'Aucune 2e roue' : 'Arrière : ' + fmt(rear,0) + ' N';
+      const frontPct = Ftot > 0 ? (front / Ftot) * 100 : 0;
+      const rearPct = Ftot > 0 ? (rear / Ftot) * 100 : 0;
+      $('barFront').style.height = Math.max(frontPct, n === 1 ? 100 : 2) + '%';
+      $('barRear').style.height = Math.max(rearPct, rear > 0 ? 2 : 0) + '%';
+
+      $('eq1').textContent = '1) Masse totale = ' + fmt(mTot,1) + ' kg ; charge max sur une roue = ' + fmt(loadMaxKg,1) + ' kg';
+      $('eq2').textContent = '2) On suppose que la structure du pneu porte ' + fmt(structShare*100,0) + ' % de cette charge. Part réellement demandée à la pression = ' + fmt(pressureLoadKg,1) + ' kg';
+      $('eq3').textContent = '3) Pression min = P_ref × (charge_pression / charge_pression_ref)^a × marge = ' + fmt(refPressure,2) + ' × (' + fmt(pressureLoadKg,1) + ' / ' + fmt(refPressureLoadKg,1) + ')^' + fmt(exponent,2) + ' × ' + fmt(safety,2) + ' = ' + fmt(pMinBar,2) + ' bar';
+
+      const box = $('statusBox');
+      if (currentBar === 0) {
+        box.className = 'warn';
+        box.textContent = 'Entre une pression actuelle pour comparer. Le message central reste : quand toute la masse passe par une seule roue, la pression nécessaire monte plus vite qu’on ne l’imagine.';
+      } else if (ratio < 0.9) {
+        box.className = 'warn';
+        box.textContent = 'La pression actuelle paraît clairement trop basse dans ce modèle. Le pneu risque d’être trop déformé et de travailler davantage en flexion.';
+      } else if (ratio < 1) {
+        box.className = 'warn';
+        box.textContent = 'La pression actuelle est légèrement sous le minimum estimé. On est proche, mais encore en dessous de la zone prudente.';
+      } else if (ratio < 1.12) {
+        box.className = 'ok';
+        box.textContent = 'La pression actuelle est cohérente avec le minimum estimé. Pour une lecture grand public, c’est une zone “ça tient la route”.';
+      } else {
+        box.className = 'ok';
+        box.textContent = 'La pression actuelle est nettement au-dessus du minimum estimé. On n’est plus dans un sous-gonflage évident selon ce modèle.';
+      }
+    }
+    update();
+  </script>
+</body>
+</html>
